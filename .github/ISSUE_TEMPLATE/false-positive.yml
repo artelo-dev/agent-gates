@@ -1,0 +1,22 @@
+name: content-lint false positive
+description: content-lint flagged text that is fine to ship
+labels: [content-lint, false-positive]
+body:
+  - type: input
+    id: rule
+    attributes:
+      label: Rule id
+      description: The id in square brackets at the end of the finding, e.g. placeholder-text
+    validations:
+      required: true
+  - type: textarea
+    id: line
+    attributes:
+      label: The flagged line (and the file extension)
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it should pass

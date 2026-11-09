@@ -1,0 +1,29 @@
+name: Bug report
+description: A gate, the CLI or the hook did something wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: Commands you ran, and a minimal project or file if you can share one.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Output of `npx agent-gates --json` (or the relevant part)
+      render: json
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: agent-gates (`npx agent-gates --version`), Node, OS, and Claude Code / Codex if the hook is involved
+    validations:
+      required: true
