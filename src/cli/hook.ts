@@ -1,11 +1,11 @@
 /**
- * `agent-gates hook claude`: a Claude Code Stop hook. When Claude tries to finish, run the gates;
- * if they fail, keep Claude working and hand it the failures (JSON on stdout, see bin.ts).
+ * `agent-gates hook claude|codex`: a Stop hook for Claude Code or Codex CLI. When the agent tries to
+ * finish, run the gates; if they fail, keep it working and hand it the failures (JSON on stdout, see bin.ts).
  *
  * Loop guards:
- * - the working tree is fingerprinted, so a turn that changed nothing (Claude only answered a
+ * - the working tree is fingerprinted, so a turn that changed nothing (the agent only answered a
  *   question) does not re-run the gates;
- * - after `maxBlocks` consecutive blocks Claude is allowed to stop, and the user gets a warning
+ * - after `maxBlocks` consecutive blocks the agent is allowed to stop, and the user gets a warning
  *   instead of an endless fix loop.
  */
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -34,9 +34,9 @@ export interface HookInput {
 
 export type HookResponse =
   | { kind: 'allow' }
-  /** Let Claude stop, but tell the user something (stdout JSON `systemMessage`). */
+  /** Let the agent stop, but tell the user something (stdout JSON `systemMessage`). */
   | { kind: 'warn'; message: string }
-  /** Keep Claude working; `reason` is what Claude reads. */
+  /** Keep the agent working; `reason` is what it reads. */
   | { kind: 'block'; reason: string };
 
 /** Before running gates: is there anything to check? */
@@ -63,7 +63,7 @@ export function decide(
     return {
       response: {
         kind: 'warn',
-        message: `agent-gates: gates still fail after ${maxBlocks} fix attempts, so Claude was allowed to stop. Run \`npx agent-gates\` to see what is left.`,
+        message: `agent-gates: gates still fail after ${maxBlocks} fix attempts, so the agent was allowed to stop. Run \`npx agent-gates\` to see what is left.`,
       },
       blocks,
     };
@@ -102,7 +102,7 @@ export function parseHookInput(text: string): HookInput {
   }
 }
 
-export interface ClaudeHookOptions extends Pick<RunOptions, 'configPath' | 'specPath'> {
+export interface StopHookOptions extends Pick<RunOptions, 'configPath' | 'specPath'> {
   cwd: string;
   input: HookInput;
   maxBlocks?: number;
@@ -110,7 +110,7 @@ export interface ClaudeHookOptions extends Pick<RunOptions, 'configPath' | 'spec
   failFast?: boolean;
 }
 
-export async function runClaudeHook(opts: ClaudeHookOptions): Promise<HookResponse> {
+export async function runStopHook(opts: StopHookOptions): Promise<HookResponse> {
   const { cwd, input } = opts;
   const maxBlocks = opts.maxBlocks ?? DEFAULT_MAX_BLOCKS;
   const state = await readState(cwd);

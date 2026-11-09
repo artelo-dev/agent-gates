@@ -74,7 +74,9 @@ Hook options are `--max-blocks <n>` (default 3), `--no-fail-fast` and `--output 
 npx agent-gates init --agents-md
 ```
 
-This adds a short "Definition of done" block to `AGENTS.md`: the task isn't done until `agent-gates` exits 0, and the agent must not weaken a gate to get there. Agents that read `AGENTS.md` run it before they report back. Codex and Gemini CLI have native stop hooks too. Support for those is planned, but it hasn't been tested yet, so it isn't shipped.
+This adds a short "Definition of done" block to `AGENTS.md`: the task isn't done until `agent-gates` exits 0, and the agent must not weaken a gate to get there. Agents that read `AGENTS.md` run it before they report back.
+
+**Codex CLI (experimental):** `npx agent-gates init --codex` adds the same Stop hook to `.codex/hooks.json`. Codex reviews project hooks before running them, so open `codex` once and trust it with `/hooks`. When the gates fail, the hook answers with `decision: "block"` and Codex continues with the failures as its next prompt. This is built to the [Codex hooks contract](https://developers.openai.com/codex/hooks), and the hook's input and output are tested, but it has not yet been run end to end in a live Codex session. Please report how it goes.
 
 ## CI
 

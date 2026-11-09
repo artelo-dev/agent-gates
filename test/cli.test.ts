@@ -334,3 +334,40 @@ describe('agent-gates.schema.json', () => {
     expect(renderConfig(d).split('\n')[0]).toMatch(/^# yaml-language-server: \$schema=https:\/\/unpkg\.com\/agent-gates@[^/]+\/schema\/agent-gates\.schema\.json$/);
   });
 });
+
+describe('Codex hook support', () => {
+  it('init --codex writes .codex/hooks.json with a codex hook next to the Claude one', async () => {
+    const dir = await tempProject({ 'package.json': '{}' });
+    const r = await runInit({ cwd: dir, claude: true, codex: true, probe: new FakeProbe() });
+    expect(r.steps.map((s) => `${s.action} ${s.file}`)).toContain('created .codex/hooks.json');
+    const codex = JSON.parse(await readFile(join(dir, '.codex/hooks.json'), 'utf8'));
+    expect(codex.hooks.Stop[0].hooks[0].command).toMatch(/agent-gates@\S+ hook codex$/);
+    const claude = JSON.parse(await readFile(join(dir, '.claude/settings.json'), 'utf8'));
+    expect(claude.hooks.Stop[0].hooks[0].command).toMatch(/hook claude$/);
+  });
+
+  it('addStopHook treats claude and codex entries as different hooks', () => {
+    const settings: Record<string, unknown> = {};
+    expect(addStopHook(settings, 'npx agent-gates hook claude')).toBe(true);
+    expect(addStopHook(settings, 'npx agent-gates hook codex')).toBe(true);
+    expect(addStopHook(settings, 'npx agent-gates hook codex')).toBe(false);
+    const stop = (settings.hooks as { Stop: unknown[] }).Stop;
+    expect(stop).toHaveLength(2);
+  });
+
+  it('findProjectRoot walks up to agent-gates.yaml, else package.json, and stops at the git root', async () => {
+    const { findProjectRoot } = await import('../src/cli/run.js');
+    const dir = await tempProject({
+      'package.json': '{}',
+      'packages/web/package.json': '{}',
+      'packages/web/src/components/a.tsx': '',
+      'packages/api/agent-gates.yaml': 'gates: {}\n',
+      'packages/api/src/a.ts': '',
+    });
+    initRepo(dir);
+    const real = (p: string) => join(dir, p);
+    expect(await findProjectRoot(real('packages/web/src/components'))).toBe(real('packages/web'));
+    expect(await findProjectRoot(real('packages/api/src'))).toBe(real('packages/api'));
+    expect(await findProjectRoot(dir)).toBe(dir);
+  });
+});

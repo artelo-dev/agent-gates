@@ -1,13 +1,13 @@
 /** Load config (or detect gates), run them, return the report. Shared by `run` and `hook`. */
 import { readFile } from 'node:fs/promises';
-import { join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { loadGatesConfig } from '../config.js';
 import type { GateId, GateReport, GateResult, Spec } from '../contracts.js';
 import { normalizeGateId } from '../ids.js';
 import { createGateRunner } from '../runner.js';
 import type { FullGatesConfig } from '../types.js';
-import { firstExisting } from '../project.js';
+import { firstExisting, pathExists } from '../project.js';
 import { CONFIG_FILES, autoConfig, detectGates } from './detect.js';
 
 export const STATE_DIR = '.agent-gates';
@@ -37,6 +37,22 @@ export interface LoadedConfig {
 }
 
 export class CliError extends Error {}
+
+/**
+ * The project a hook should check when the agent may be sitting in a subdirectory: walk up from
+ * `start` to the nearest agent-gates.yaml, else the nearest package.json, never past the git root.
+ */
+export async function findProjectRoot(start: string): Promise<string> {
+  let dir = resolve(start);
+  let pkgDir: string | undefined;
+  for (;;) {
+    if (await firstExisting(dir, CONFIG_FILES)) return dir;
+    if (!pkgDir && (await pathExists(join(dir, 'package.json')))) pkgDir = dir;
+    const parent = dirname(dir);
+    if ((await pathExists(join(dir, '.git'))) || parent === dir) return pkgDir ?? dir;
+    dir = parent;
+  }
+}
 
 export async function loadConfig(cwd: string, configPath?: string): Promise<LoadedConfig> {
   if (configPath) {

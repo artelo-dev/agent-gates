@@ -28,6 +28,7 @@ export interface InitOptions {
   cwd: string;
   force?: boolean;
   claude?: boolean;
+  codex?: boolean;
   agentsMd?: boolean;
   github?: boolean;
   /** Record existing content findings in a baseline (default true). */
@@ -116,8 +117,10 @@ export async function runCommand(cwd: string, probe: ToolProbe): Promise<string>
   return local ? 'npx --no-install agent-gates' : `npx --yes agent-gates@${VERSION}`;
 }
 
-export async function hookCommand(cwd: string, probe: ToolProbe): Promise<string> {
-  return `${await runCommand(cwd, probe)} hook claude`;
+export type HookAgent = 'claude' | 'codex';
+
+export async function hookCommand(cwd: string, probe: ToolProbe, agent: HookAgent = 'claude'): Promise<string> {
+  return `${await runCommand(cwd, probe)} hook ${agent}`;
 }
 
 interface HookEntry {
@@ -130,13 +133,18 @@ interface HookGroup {
   hooks?: HookEntry[];
 }
 
-/** Add our Stop hook to a parsed settings.json; returns false when it is already there. */
+/**
+ * Add our Stop hook to a parsed `.claude/settings.json` or `.codex/hooks.json` (same shape:
+ * hooks.Stop[].hooks[]); returns false when it is already there.
+ */
 export function addStopHook(settings: Record<string, unknown>, command: string): boolean {
+  const agent = /\bhook (\w+)\b/.exec(command)?.[1] ?? 'claude';
+  const ours = new RegExp(`\\bagent-gates\\b.*\\bhook ${agent}\\b`);
   const hooks = (settings.hooks && typeof settings.hooks === 'object' ? settings.hooks : (settings.hooks = {})) as Record<string, unknown>;
   const stop = (Array.isArray(hooks.Stop) ? hooks.Stop : (hooks.Stop = [])) as HookGroup[];
   for (const group of stop) {
     for (const h of group.hooks ?? []) {
-      if (typeof h.command === 'string' && /\bagent-gates\b.*\bhook claude\b/.test(h.command)) {
+      if (typeof h.command === 'string' && ours.test(h.command)) {
         if (h.command === command && h.timeout === HOOK_TIMEOUT_SECONDS) return false;
         h.command = command;
         h.timeout = HOOK_TIMEOUT_SECONDS;
@@ -148,8 +156,8 @@ export function addStopHook(settings: Record<string, unknown>, command: string):
   return true;
 }
 
-async function writeClaudeHook(cwd: string, command: string): Promise<InitStep> {
-  const file = join('.claude', 'settings.json');
+async function writeHookFile(cwd: string, agent: HookAgent, command: string): Promise<InitStep> {
+  const file = agent === 'claude' ? join('.claude', 'settings.json') : join('.codex', 'hooks.json');
   const abs = join(cwd, file);
   let settings: Record<string, unknown> = {};
   let existed = false;
@@ -167,7 +175,11 @@ async function writeClaudeHook(cwd: string, command: string): Promise<InitStep> 
   if (!addStopHook(settings, command)) return { file, action: 'unchanged', note: 'Stop hook already installed' };
   await mkdir(dirname(abs), { recursive: true });
   await writeFile(abs, `${JSON.stringify(settings, null, 2)}\n`);
-  return { file, action: existed ? 'updated' : 'created', note: 'Stop hook: Claude cannot finish while gates fail' };
+  const note =
+    agent === 'claude'
+      ? 'Stop hook: Claude cannot finish while gates fail'
+      : 'Stop hook: Codex keeps working while gates fail (trust it once with /hooks)';
+  return { file, action: existed ? 'updated' : 'created', note };
 }
 
 // ---------------------------------------------------------------------------
@@ -290,7 +302,8 @@ export async function runInit(opts: InitOptions): Promise<InitResult> {
 
   steps.push(await ensureGitignore(opts.cwd));
   const command = await hookCommand(opts.cwd, probe);
-  if (opts.claude) steps.push(await writeClaudeHook(opts.cwd, command));
+  if (opts.claude) steps.push(await writeHookFile(opts.cwd, 'claude', command));
+  if (opts.codex) steps.push(await writeHookFile(opts.cwd, 'codex', await hookCommand(opts.cwd, probe, 'codex')));
   if (opts.agentsMd) steps.push(await writeAgentsMd(opts.cwd, await runCommand(opts.cwd, probe)));
   if (opts.github) steps.push(await writeGithubWorkflow(opts.cwd, detection, opts.force === true));
   return { detection, steps, hookCommand: command };

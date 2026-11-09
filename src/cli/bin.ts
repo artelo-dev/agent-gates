@@ -9,9 +9,9 @@ import type { ParsedArgs } from './args.js';
 import { detectGates } from './detect.js';
 import { formatGateLine, formatVerdict, paint } from './format.js';
 import type { Style } from './format.js';
-import { DEFAULT_MAX_BLOCKS, parseHookInput, runClaudeHook } from './hook.js';
+import { DEFAULT_MAX_BLOCKS, parseHookInput, runStopHook } from './hook.js';
 import { runInit } from './init.js';
-import { CliError, STATE_DIR, runGates } from './run.js';
+import { CliError, STATE_DIR, findProjectRoot, runGates } from './run.js';
 import { VERSION } from './version.js';
 
 const HELP = `agent-gates ${VERSION} — hard quality gates for any coding agent
@@ -21,6 +21,7 @@ Usage
   agent-gates init             write agent-gates.yaml for this project
   agent-gates detect           show which gates apply here and why
   agent-gates hook claude      Claude Code Stop hook (installed by init --claude)
+  agent-gates hook codex       Codex CLI Stop hook (installed by init --codex)
                                --max-blocks <n> (default 3)  --output context|block
                                --no-fail-fast (by default the hook stops at the first failing gate)
 
@@ -36,9 +37,10 @@ Run options
 
 Init options
   --claude                     add a Stop hook to .claude/settings.json
+  --codex                      add a Stop hook to .codex/hooks.json
   --agents-md                  add a "definition of done" block to AGENTS.md
   --github                     add .github/workflows/agent-gates.yml
-  --all                        all three
+  --all                        all of the above
   --no-baseline                fail on existing content findings too
   --force                      overwrite existing files
 
@@ -100,13 +102,14 @@ async function cmdRun(args: ParsedArgs, gates: string[]): Promise<number> {
 }
 
 async function cmdInit(args: ParsedArgs): Promise<number> {
-  assertKnownFlags(args, ['claude', 'agents-md', 'github', 'all', 'no-baseline', 'force', 'cwd', 'no-color']);
+  assertKnownFlags(args, ['claude', 'codex', 'agents-md', 'github', 'all', 'no-baseline', 'force', 'cwd', 'no-color']);
   const s = style(args);
   const all = flagBool(args, 'all');
   const result = await runInit({
     cwd: cwdOf(args),
     force: flagBool(args, 'force'),
     claude: all || flagBool(args, 'claude'),
+    codex: all || flagBool(args, 'codex'),
     agentsMd: all || flagBool(args, 'agents-md'),
     github: all || flagBool(args, 'github'),
     baseline: !flagBool(args, 'no-baseline'),
@@ -139,12 +142,15 @@ async function cmdDetect(args: ParsedArgs): Promise<number> {
 
 async function cmdHook(args: ParsedArgs, target: string | undefined): Promise<number> {
   assertKnownFlags(args, ['max-blocks', 'config', 'spec', 'cwd', 'output', 'no-fail-fast']);
-  if (target !== 'claude') throw new UsageError('usage: agent-gates hook claude');
-  const output = flagString(args, 'output') ?? 'context';
+  if (target !== 'claude' && target !== 'codex') throw new UsageError('usage: agent-gates hook claude|codex');
+  // Codex has no additionalContext for Stop: decision:block is its continuation mechanism.
+  const output = flagString(args, 'output') ?? (target === 'codex' ? 'block' : 'context');
   if (output !== 'context' && output !== 'block') throw new UsageError('--output must be "context" or "block"');
+  if (target === 'codex' && output !== 'block') throw new UsageError('Codex supports only --output block');
   const raw = await readStdin();
   const input = parseHookInput(raw);
-  const cwd = resolve(flagString(args, 'cwd') ?? process.env.CLAUDE_PROJECT_DIR ?? input.cwd ?? process.cwd());
+  const explicit = flagString(args, 'cwd') ?? (target === 'claude' ? process.env.CLAUDE_PROJECT_DIR : undefined);
+  const cwd = explicit ? resolve(explicit) : await findProjectRoot(input.cwd ?? process.cwd());
   if (process.env.AGENT_GATES_DEBUG) {
     await mkdir(join(cwd, STATE_DIR), { recursive: true });
     await appendFile(join(cwd, STATE_DIR, 'hook-input.log'), `${new Date().toISOString()} ${raw.trim()}\n`);
@@ -152,12 +158,12 @@ async function cmdHook(args: ParsedArgs, target: string | undefined): Promise<nu
   const maxRaw = flagString(args, 'max-blocks');
   const maxBlocks = maxRaw === undefined ? DEFAULT_MAX_BLOCKS : Number(maxRaw);
   if (!Number.isInteger(maxBlocks) || maxBlocks < 1) throw new UsageError('--max-blocks must be a positive integer');
-  const opts: Parameters<typeof runClaudeHook>[0] = { cwd, input, maxBlocks, failFast: !flagBool(args, 'no-fail-fast') };
+  const opts: Parameters<typeof runStopHook>[0] = { cwd, input, maxBlocks, failFast: !flagBool(args, 'no-fail-fast') };
   const config = flagString(args, 'config');
   const spec = flagString(args, 'spec');
   if (config) opts.configPath = config;
   if (spec) opts.specPath = spec;
-  const response = await runClaudeHook(opts);
+  const response = await runStopHook(opts);
   // JSON on stdout, never exit 2 + stderr: Claude Code treats an exit-2 stderr that contains
   // "No such file or directory" as a non-blocking error, and gate output can contain that.
   // Default `context` continues the turn with the failures as "Stop hook feedback" (no hook-error
