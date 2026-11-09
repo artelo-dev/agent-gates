@@ -103,7 +103,7 @@ You can also run a subset: `npx agent-gates tsc eslint content-lint`.
 
 ## Configuration
 
-`agent-gates.yaml` (written by `init`; every key is optional):
+`agent-gates.yaml` (written by `init`; every key is optional). The file starts with a `yaml-language-server` comment that points at [`schema/agent-gates.schema.json`](schema/agent-gates.schema.json), so VS Code (YAML extension) and JetBrains IDEs autocomplete keys and flag typos like `alowSkip`.
 
 ```yaml
 server:

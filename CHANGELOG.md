@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- JSON Schema for `agent-gates.yaml` (`schema/agent-gates.schema.json`), referenced from the file `init` writes: editor autocomplete and typo checks.
 - GitHub Actions annotations: failures appear inline on the PR diff (`--no-annotations` to disable).
 - Build script runs on Windows `cmd.exe`; CI matrix for Linux, macOS, Windows.
 

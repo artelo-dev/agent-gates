@@ -70,6 +70,7 @@ function visibleSettings(gate: string): GateConfig {
 
 export function renderConfig(detection: Detection, opts: { baseline?: string } = {}): string {
   const lines = [
+    `# yaml-language-server: $schema=https://unpkg.com/agent-gates@${VERSION}/schema/agent-gates.schema.json`,
     '# agent-gates: "done" means these checks passed, not that the agent said so.',
     '# Docs: https://github.com/artelo-dev/agent-gates#configuration',
     '#',

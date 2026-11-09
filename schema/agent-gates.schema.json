@@ -1,0 +1,399 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://unpkg.com/agent-gates/schema/agent-gates.schema.json",
+  "title": "agent-gates.yaml",
+  "description": "Configuration for agent-gates: which quality gates run and what counts as passing. https://github.com/artelo-dev/agent-gates#configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "server": {
+      "description": "Preview server for browser gates (axe, visual, lighthouse, playwright). Without command or url, the project's \"start\" script runs with PORT set.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "Command that serves the built app, e.g. \"pnpm start\"."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Base URL of an already running app. No server is started."
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 3100,
+          "description": "Exported as PORT to the server process."
+        },
+        "readyTimeoutMs": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 60000,
+          "description": "How long to wait for the URL to answer."
+        },
+        "shell": {
+          "type": "boolean",
+          "description": "Run command through a shell."
+        }
+      }
+    },
+    "env": {
+      "description": "Names of environment variables forwarded to gate commands. Gates run agent-written code, so nothing else is inherited; deploy tokens and LLM keys are refused.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "gates": {
+      "description": "Gates to run, in this order. Any other key with a command becomes a custom gate.",
+      "type": "object",
+      "properties": {
+        "tsc": {
+          "$ref": "#/$defs/thresholdGate",
+          "description": "TypeScript type check (tsc --noEmit). Threshold: errors."
+        },
+        "typecheck": {
+          "$ref": "#/$defs/thresholdGate",
+          "description": "Alias of tsc."
+        },
+        "eslint": {
+          "$ref": "#/$defs/thresholdGate",
+          "description": "ESLint. Threshold: errors."
+        },
+        "lint": {
+          "$ref": "#/$defs/thresholdGate",
+          "description": "Alias of eslint."
+        },
+        "build": {
+          "$ref": "#/$defs/gate",
+          "description": "The project's build script."
+        },
+        "tests": {
+          "$ref": "#/$defs/gate",
+          "description": "The project's test script."
+        },
+        "test": {
+          "$ref": "#/$defs/gate",
+          "description": "Alias of tests."
+        },
+        "content-lint": {
+          "$ref": "#/$defs/contentLint"
+        },
+        "content": {
+          "$ref": "#/$defs/contentLint",
+          "description": "Alias of content-lint."
+        },
+        "axe": {
+          "$ref": "#/$defs/axe"
+        },
+        "a11y": {
+          "$ref": "#/$defs/axe",
+          "description": "Alias of axe."
+        },
+        "visual": {
+          "$ref": "#/$defs/visual"
+        },
+        "screenshots": {
+          "$ref": "#/$defs/visual",
+          "description": "Alias of visual."
+        },
+        "lighthouse": {
+          "$ref": "#/$defs/lighthouse"
+        },
+        "playwright": {
+          "$ref": "#/$defs/playwright"
+        },
+        "smoke": {
+          "$ref": "#/$defs/playwright",
+          "description": "Alias of playwright."
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/gate"
+      }
+    }
+  },
+  "$defs": {
+    "gateBase": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "false: reported as skipped, never blocks."
+        },
+        "required": {
+          "type": "boolean",
+          "default": true,
+          "description": "false: a failure is reported but does not fail the run."
+        },
+        "allowSkip": {
+          "type": "boolean",
+          "default": false,
+          "description": "false: a gate that cannot run (missing tool, browser, script) counts as failed."
+        },
+        "command": {
+          "type": "string",
+          "description": "Override the command (or define a custom gate)."
+        },
+        "shell": {
+          "type": "boolean",
+          "description": "Run command through a shell."
+        },
+        "timeoutMs": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "thresholds": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "gate": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/gateBase"
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "thresholdBase": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/gateBase"
+        }
+      ],
+      "properties": {
+        "thresholds": {
+          "type": "object",
+          "properties": {
+            "errors": {
+              "type": "number",
+              "minimum": 0,
+              "default": 0
+            }
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "thresholdGate": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/thresholdBase"
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "browserBase": {
+      "properties": {
+        "routes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Routes to check (default: spec page routes, else /)."
+        },
+        "url": {
+          "type": "string",
+          "description": "Base URL for this gate only."
+        }
+      }
+    },
+    "contentLint": {
+      "description": "Built-in check for text an agent left unfinished: lorem ipsum, TODO, example.com, empty links, {PLACEHOLDERS}, \"Placeholder \u2026\" copy.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/thresholdBase"
+        }
+      ],
+      "properties": {
+        "baseline": {
+          "type": "string",
+          "description": "Findings file written by `agent-gates init`; only findings not in it fail."
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Globs to scan instead of every code/content file."
+        },
+        "exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Globs to skip, added to the defaults."
+        },
+        "replaceDefaultExcludes": {
+          "type": "boolean"
+        },
+        "patterns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "regex"
+          },
+          "description": "Extra forbidden regexes."
+        },
+        "disableRules": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "lorem",
+              "todo",
+              "example-domain",
+              "empty-href",
+              "placeholder",
+              "placeholder-text",
+              "fill-in-text"
+            ]
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "axe": {
+      "description": "Accessibility check with axe-core. Needs @playwright/test and @axe-core/playwright.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/gateBase"
+        },
+        {
+          "$ref": "#/$defs/browserBase"
+        }
+      ],
+      "properties": {
+        "failOn": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "critical",
+              "serious",
+              "moderate",
+              "minor"
+            ]
+          },
+          "default": [
+            "critical",
+            "serious"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "axe rule tags, e.g. wcag2aa."
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "visual": {
+      "description": "Screenshots per viewport; fails on horizontal overflow. Needs @playwright/test.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/gateBase"
+        },
+        {
+          "$ref": "#/$defs/browserBase"
+        }
+      ],
+      "properties": {
+        "viewports": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "default": [
+            375,
+            768,
+            1440
+          ]
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "lighthouse": {
+      "description": "Lighthouse scores. Needs the lighthouse package and Chrome.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/gateBase"
+        },
+        {
+          "$ref": "#/$defs/browserBase"
+        }
+      ],
+      "properties": {
+        "preset": {
+          "enum": [
+            "desktop",
+            "mobile"
+          ],
+          "default": "mobile"
+        },
+        "thresholds": {
+          "type": "object",
+          "properties": {
+            "performance": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 90
+            },
+            "accessibility": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 95
+            },
+            "best-practices": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "seo": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 95
+            }
+          },
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+    "playwright": {
+      "description": "Smoke test generated from a spec (--spec): every section is on its page, every form submits.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/gateBase"
+        },
+        {
+          "$ref": "#/$defs/browserBase"
+        }
+      ],
+      "properties": {
+        "mockPathPrefix": {
+          "type": "string",
+          "default": "/api/",
+          "description": "Form submissions to this path are mocked."
+        }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

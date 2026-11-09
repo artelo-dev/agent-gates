@@ -38,15 +38,16 @@
       "import": "./dist/index.js"
     },
     "./package.json": "./package.json",
-    "./presets/*": "./presets/*"
+    "./presets/*": "./presets/*",
+    "./schema/*": "./schema/*"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
     "presets",
+    "schema",
     "!dist/**/*.map",
-    "!dist/**/*.d.ts.map",
     "CHANGELOG.md"
   ],
   "scripts": {

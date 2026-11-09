@@ -314,3 +314,23 @@ describe('GitHub annotations', () => {
     expect(lines[3]).toBe('::warning title=agent-gates::2 more problems not annotated; see the report artifact');
   });
 });
+
+describe('agent-gates.schema.json', () => {
+  it('knows every built-in gate, alias and content rule', async () => {
+    const { BUILTIN_GATE_IDS, GATE_ALIASES, BUILTIN_CONTENT_RULES } = await import('../src/index.js');
+    const schema = JSON.parse(await readFile(new URL('../schema/agent-gates.schema.json', import.meta.url), 'utf8'));
+    const gateKeys = Object.keys(schema.properties.gates.properties);
+    for (const id of BUILTIN_GATE_IDS) expect(gateKeys, id).toContain(id);
+    for (const [alias, target] of Object.entries(GATE_ALIASES)) {
+      if (gateKeys.includes(alias)) expect(schema.properties.gates.properties[alias].$ref).toBe(schema.properties.gates.properties[target].$ref);
+    }
+    const ruleEnum: string[] = schema.$defs.contentLint.properties.disableRules.items.enum;
+    expect([...ruleEnum].sort()).toEqual(BUILTIN_CONTENT_RULES.map((r) => r.id).sort());
+  });
+
+  it('is referenced from the config init writes', async () => {
+    const dir = await tempProject({ 'package.json': '{}' });
+    const d = await detectGates(dir, new FakeProbe());
+    expect(renderConfig(d).split('\n')[0]).toMatch(/^# yaml-language-server: \$schema=https:\/\/unpkg\.com\/agent-gates@[^/]+\/schema\/agent-gates\.schema\.json$/);
+  });
+});
