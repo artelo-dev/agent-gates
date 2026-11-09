@@ -1,0 +1,57 @@
+# Gate thresholds for the `landing` recipe (docs/02-factory.md, "Гейты").
+# Loaded by @artelo/gates `loadGatesConfig`; identical to DEFAULT_GATES_CONFIG.
+#
+# Per gate: enabled, required (default true), allowSkip (default true; false = a skipped gate
+# fails the report), command (override), shell, timeoutMs, thresholds, routes, plus
+# gate-specific keys (patterns/include/exclude/disableRules for content-lint, failOn for axe,
+# viewports for visual, preset: desktop for lighthouse, mockPathPrefix for playwright).
+#
+# SECURITY: gates execute UNTRUSTED, agent-written code (package.json scripts, next/eslint/
+# playwright configs). Gate commands and the preview server get a scrubbed environment: PATH, HOME,
+# TMPDIR, LANG, CI, NODE_ENV, PORT (+ a few non-secret tool locations), never process.env.
+# To forward more variables, list their NAMES under a top-level `env:` key, e.g.
+#   env: [NEXT_PUBLIC_SITE_URL]
+# Deploy tokens and LLM keys (VERCEL_*, ANTHROPIC_*, OPENAI_*, ...) are rejected even if listed.
+
+# Preview server for browser gates (playwright, axe, visual, lighthouse).
+# Without `command`, the project's "start" script runs with PORT set.
+server:
+  port: 3100
+  readyTimeoutMs: 60000
+
+gates:
+  tsc:
+    required: true
+    allowSkip: false
+    thresholds: { errors: 0 }
+  eslint:
+    required: true
+    allowSkip: false
+    thresholds: { errors: 0 }
+  content-lint:
+    required: true
+    allowSkip: false
+    thresholds: { errors: 0 }
+  build:
+    required: true
+    allowSkip: false
+  tests:
+    required: true
+    allowSkip: false
+  playwright:
+    required: true
+    allowSkip: false
+    thresholds: { failures: 0 }
+  axe:
+    required: true
+    allowSkip: false
+    failOn: [critical, serious]
+  lighthouse:
+    required: true
+    allowSkip: false
+    thresholds: { performance: 90, accessibility: 95, seo: 95 }
+  visual:
+    required: true
+    allowSkip: false
+    viewports: [375, 768, 1440]
+    thresholds: { horizontalOverflow: 0 }

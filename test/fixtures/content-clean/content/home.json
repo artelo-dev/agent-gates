@@ -1,0 +1,8 @@
+{
+  "hero": {
+    "headline": "Your own AI dev shop. Installed in one command.",
+    "cta": { "label": "Get founding access", "href": "#pricing" }
+  },
+  "faq": [{ "q": "Is it open source?", "a": "You get the full source under a commercial license." }],
+  "i18n": "You have {count} new messages"
+}

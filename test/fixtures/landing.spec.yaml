@@ -1,0 +1,123 @@
+# Test fixture: a filled-in spec for the landing recipe. The business is made up (a dog-walking
+# service); no name, price, address or claim in this file refers to a real company.
+# Format: schemas/spec.schema.json (template: recipes/landing/spec.template.yaml).
+# Read by the core, agents and gates test suites and by recipes/landing/__tests__.
+version: 1
+recipe: landing
+
+project:
+  name: Paw & Path
+  slug: paw-and-path
+  goal: Visitors in the service area book a free meet-and-greet before their dog's first walk.
+  audience: Busy dog owners in central Porto who work office hours and want reliable midday walks
+  language: en
+
+brand:
+  name: Paw & Path
+  domain: pawandpath.test
+  positioning: small, insured team of local walkers; the same walker every week
+  tone: warm, calm, practical; short sentences; no cute overload
+  style: light, airy layout; rounded cards; photos of walks in the park
+  palette: off-white background, forest-green accents, charcoal text
+  fonts: Fraunces (headings) + Inter (body)
+
+pages:
+  - id: home
+    route: /
+    sections:
+      - id: nav
+        content:
+          links: [Services, How it works, Pricing, FAQ]
+          cta: Book a meet-and-greet
+        acceptance: [sticky, collapses at <768px, "CTA → #booking"]
+
+      - id: hero
+        content:
+          headline: Midday walks your dog looks forward to.
+          sub: One familiar walker, the same time every weekday, a photo update after every walk.
+          cta_primary: Book a free meet-and-greet
+          cta_secondary: See prices
+        acceptance: [headline above the fold at 375 and 1440, both CTAs work]
+
+      - id: services
+        content:
+          title: What we do
+          items:
+            - { title: Solo walks, text: "45 minutes, one dog, your route or ours." }
+            - { title: Small-group walks, text: "Up to three friendly dogs of a similar size." }
+            - { title: Puppy visits, text: "Short visits for feeding, play and a toilet break." }
+
+      - id: how-it-works
+        content:
+          title: How it works
+          steps:
+            - { title: Meet, text: "We visit you and your dog for free and agree on a routine." }
+            - { title: Walk, text: "Your walker comes at the agreed time and picks up the key from a lockbox." }
+            - { title: Update, text: "You get a photo and a short note after every walk." }
+
+      - id: pricing
+        content:
+          title: Simple per-walk pricing.
+          plans:
+            - { id: solo, name: Solo walk, price: "€18", cta: Book solo walks }
+            - { id: group, name: Group walk, price: "€13", cta: Book group walks }
+          notes:
+            - No contract; cancel any walk up to 24 hours before.
+        acceptance: ["plan CTA preselects the plan in the #booking form"]
+
+      - id: faq
+        content:
+          items:
+            - q: Are you insured?
+              a: Every walker is covered by our liability insurance while on a walk.
+            - q: What if my walker is ill?
+              a: A second walker who has already met your dog takes over and we tell you the day before.
+
+      - id: booking
+        purpose: meet-and-greet request
+        content:
+          title: Book a free meet-and-greet
+          fields:
+            - { name: name, type: text, required: true }
+            - { name: email, type: email, required: true }
+            - { name: dog_size, type: select, options: [Small, Medium, Large] }
+            - { name: notes, type: textarea, label: Anything we should know about your dog? }
+          submit: Request a visit
+          success: Thanks! We will reply within one working day to arrange the visit.
+        acceptance: [client + server validation, honeypot, success state]
+
+      - id: footer
+        content: { links: [Instagram, Email], legal: © Paw & Path }
+
+features:
+  - id: booking-request
+    description: POST /api/booking → validate (zod) → email notification to the owner of the business
+    acceptance: [rate limit, honeypot, 200 on success, errors shown in form, works without env (logs only)]
+  - id: seo
+    description: title/description, OG image, sitemap.xml, robots.txt
+
+integrations:
+  - { id: email, provider: resend, env: [RESEND_API_KEY, BOOKING_NOTIFY_EMAIL] }
+
+stack:
+  framework: nextjs (app router), typescript
+  styling: tailwind
+  testing: playwright
+  deploy: vercel
+
+constraints:
+  - no fake testimonials, logos, review counts or ratings
+  - no lorem ipsum / placeholders in production build
+  - all copy lives in one content file, not hardcoded in components
+
+done:
+  - tsc, eslint clean; next build passes
+  - lighthouse mobile perf>=90 a11y>=95 seo>=95
+  - axe 0 critical/serious
+  - looks correct at 375 / 768 / 1440
+
+budget: { max_usd: 15, max_hours: 3 }
+
+open_questions:
+  - Exact service area (which neighbourhoods)
+  - Real walker photos or illustrations

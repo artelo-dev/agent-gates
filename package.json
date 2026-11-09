@@ -1,0 +1,66 @@
+{
+  "name": "agent-gates",
+  "version": "0.1.0",
+  "description": "Hard quality gates for any coding agent: \"done\" means tsc, eslint, build, tests, content-lint, axe, screenshots and Lighthouse said so.",
+  "keywords": [
+    "ai",
+    "coding-agent",
+    "claude-code",
+    "codex",
+    "gemini-cli",
+    "quality-gates",
+    "lint",
+    "playwright",
+    "lighthouse",
+    "axe",
+    "ci"
+  ],
+  "license": "MIT",
+  "author": "Roman <hello@artelo.space> (https://artelo.space)",
+  "homepage": "https://github.com/artelo-dev/agent-gates#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/artelo-dev/agent-gates.git"
+  },
+  "bugs": {
+    "url": "https://github.com/artelo-dev/agent-gates/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "bin": {
+    "agent-gates": "./dist/cli/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./presets/*": "./presets/*"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "presets",
+    "!dist/**/*.map",
+    "!dist/**/*.d.ts.map",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && chmod +x dist/cli/bin.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "typescript": "~6.0.3",
+    "vitest": "^5.1.0"
+  }
+}

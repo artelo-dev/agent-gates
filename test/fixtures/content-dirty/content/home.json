@@ -1,0 +1,10 @@
+{
+  "hero": {
+    "headline": "Lorem ipsum dolor sit amet",
+    "sub": "Contact us at hello@example.com",
+    "cta": { "label": "Buy", "href": "" }
+  },
+  "pricing": {
+    "notes": ["Early access on {LAUNCH_DATE}.", "Price: TBD"]
+  }
+}

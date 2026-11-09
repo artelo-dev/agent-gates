@@ -1,0 +1,12 @@
+# agent-gates checks itself. The docs and the content-lint rules name the very patterns they
+# forbid, so those files are excluded from content-lint.
+gates:
+  tsc:
+    allowSkip: false
+  content-lint:
+    allowSkip: false
+    exclude: [README.md, CHANGELOG.md, "src/gates/content-lint/**", "src/cli/**", "src/gates/browser/generate.ts", "presets/**"]
+  build:
+    allowSkip: false
+  tests:
+    allowSkip: false
