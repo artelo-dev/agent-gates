@@ -5,7 +5,7 @@ gates:
     allowSkip: false
   content-lint:
     allowSkip: false
-    exclude: [README.md, CHANGELOG.md, "src/gates/content-lint/**", "src/cli/**", "src/gates/browser/generate.ts", "presets/**"]
+    exclude: [README.md, CHANGELOG.md, CONTRIBUTING.md, "schema/**", "src/gates/content-lint/**", "src/cli/**", "src/gates/browser/generate.ts", "presets/**"]
   build:
     allowSkip: false
   tests:
