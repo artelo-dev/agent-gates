@@ -1,5 +1,5 @@
-# Gate thresholds for the `landing` recipe (docs/02-factory.md, "Гейты").
-# Loaded by @artelo/gates `loadGatesConfig`; identical to DEFAULT_GATES_CONFIG.
+# Gate thresholds for a marketing site or landing page: every gate blocking.
+# Same as DEFAULT_GATES_CONFIG. Use: npx agent-gates --config node_modules/agent-gates/presets/landing.gates.yaml
 #
 # Per gate: enabled, required (default true), allowSkip (default true; false = a skipped gate
 # fails the report), command (override), shell, timeoutMs, thresholds, routes, plus

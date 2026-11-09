@@ -1,7 +1,7 @@
 /**
  * gates.yaml loading, validation and defaults.
  *
- * Defaults mirror docs/02-factory.md: tsc/eslint 0 errors, build succeeds, Playwright smoke has
+ * Defaults: tsc/eslint 0 errors, build succeeds, Playwright smoke has
  * 0 failures, Lighthouse mobile perf >= 90 / a11y >= 95 / SEO >= 95, axe 0 critical/serious,
  * content-lint 0 findings, screenshots at 375/768/1440.
  */

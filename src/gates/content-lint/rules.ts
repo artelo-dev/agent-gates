@@ -1,4 +1,4 @@
-/** Built-in content-lint rules (docs/02-factory.md: no lorem, TODO, example.com, empty href). */
+/** Built-in content-lint rules (no lorem, TODO, example.com, empty href, placeholders). */
 
 export interface ContentRule {
   id: string;
