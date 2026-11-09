@@ -53,11 +53,20 @@ export interface GateRunnerOptions extends GateRunnerHooks {
   now?: () => Date;
   /** Write `<artifactsDir>/gates.json` (default true). */
   writeReport?: boolean;
+  /**
+   * After a blocking failure, skip the expensive gates that follow (build, tests, browser and custom
+   * gates); they are reported as skipped and do not count. The quick static gates (tsc, eslint,
+   * content-lint) always run, so an agent gets every cheap failure in one round, in seconds.
+   */
+  failFast?: boolean;
   reportFileName?: string;
 }
 
 /** Scratch dir for generated Playwright files; must live inside the project so imports resolve. */
 const SCRATCH_PARENT = ['.agent-gates', 'tmp'];
+
+/** Gates that take seconds and never start the app: fail-fast never skips them. */
+export const QUICK_GATES: ReadonlySet<GateId> = new Set(['tsc', 'eslint', 'content-lint']);
 
 export class DefaultGateRunner implements GateRunner {
   private readonly exec: CommandExecutor;
@@ -87,6 +96,7 @@ export class DefaultGateRunner implements GateRunner {
     const results: GateResult[] = [];
     const policies: Partial<Record<GateId, GatePolicy>> = {};
     let buildBroken = false;
+    let firstFailure: GateId | undefined;
     try {
       for (const id of ids) {
         const resolved = resolveGateConfig(config, id);
@@ -97,9 +107,18 @@ export class DefaultGateRunner implements GateRunner {
         const started = Date.now();
         let outcome: GateOutcome;
         if (ctx.signal?.aborted) outcome = errored('run aborted before this gate started');
+        else if (this.opts.failFast && firstFailure && !QUICK_GATES.has(id)) {
+          outcome = skipped(`not run: ${firstFailure} failed first (fail-fast)`);
+          policies[id] = { required: false, allowSkip: true };
+        }
         else if (!resolved.enabled) outcome = skipped('disabled in gates.yaml');
         else if (!impl) outcome = errored(`unknown gate "${id}" (no built-in runner and no command in gates.yaml)`);
-        else if (impl.browser && buildBroken) outcome = skipped('blocked: the build gate did not pass');
+        else if (impl.browser && buildBroken) {
+          // The build failure already blocks; counting this skip too would only add noise (and
+          // tell an agent to "install the missing tool" when the real cause is the build).
+          outcome = skipped('blocked: the build gate did not pass');
+          policies[id] = { required: false, allowSkip: true };
+        }
         else {
           const rc: GateRunContext = {
             gate: id,
@@ -121,6 +140,7 @@ export class DefaultGateRunner implements GateRunner {
         if (id === 'build' && (outcome.status === 'failed' || outcome.status === 'error')) buildBroken = true;
         const result: GateResult = { gate: id, ...outcome, durationMs: Date.now() - started };
         result.blocking = isBlocking(result, policies[id]);
+        if (result.blocking) firstFailure ??= id;
         results.push(result);
         this.opts.onGateResult?.(result, ctx);
       }

@@ -22,6 +22,7 @@ Usage
   agent-gates detect           show which gates apply here and why
   agent-gates hook claude      Claude Code Stop hook (installed by init --claude)
                                --max-blocks <n> (default 3)  --output context|block
+                               --no-fail-fast (by default the hook stops at the first failing gate)
 
 Run options
   --json                       print the report as JSON
@@ -29,6 +30,7 @@ Run options
   --spec <file>                spec YAML with pages/sections: enables the playwright smoke gate
   --out <dir>                  report + screenshots dir (default: .agent-gates/last)
   --cwd <dir>                  project directory (default: current directory)
+  --fail-fast                  stop at the first failing gate
   --no-annotations             in GitHub Actions, do not print ::error annotations
   --no-color
 
@@ -60,13 +62,13 @@ async function readStdin(): Promise<string> {
 }
 
 async function cmdRun(args: ParsedArgs, gates: string[]): Promise<number> {
-  assertKnownFlags(args, ['json', 'config', 'spec', 'out', 'cwd', 'no-color', 'no-annotations']);
+  assertKnownFlags(args, ['json', 'config', 'spec', 'out', 'cwd', 'no-color', 'no-annotations', 'fail-fast']);
   const s = style(args);
   const json = flagBool(args, 'json');
   const controller = new AbortController();
   process.once('SIGINT', () => controller.abort());
   const cwd = cwdOf(args);
-  const opts: Parameters<typeof runGates>[0] = { cwd, gates, signal: controller.signal };
+  const opts: Parameters<typeof runGates>[0] = { cwd, gates, signal: controller.signal, failFast: flagBool(args, 'fail-fast') };
   const config = flagString(args, 'config');
   const spec = flagString(args, 'spec');
   const out = flagString(args, 'out');
@@ -136,7 +138,7 @@ async function cmdDetect(args: ParsedArgs): Promise<number> {
 }
 
 async function cmdHook(args: ParsedArgs, target: string | undefined): Promise<number> {
-  assertKnownFlags(args, ['max-blocks', 'config', 'spec', 'cwd', 'output']);
+  assertKnownFlags(args, ['max-blocks', 'config', 'spec', 'cwd', 'output', 'no-fail-fast']);
   if (target !== 'claude') throw new UsageError('usage: agent-gates hook claude');
   const output = flagString(args, 'output') ?? 'context';
   if (output !== 'context' && output !== 'block') throw new UsageError('--output must be "context" or "block"');
@@ -150,7 +152,7 @@ async function cmdHook(args: ParsedArgs, target: string | undefined): Promise<nu
   const maxRaw = flagString(args, 'max-blocks');
   const maxBlocks = maxRaw === undefined ? DEFAULT_MAX_BLOCKS : Number(maxRaw);
   if (!Number.isInteger(maxBlocks) || maxBlocks < 1) throw new UsageError('--max-blocks must be a positive integer');
-  const opts: Parameters<typeof runClaudeHook>[0] = { cwd, input, maxBlocks };
+  const opts: Parameters<typeof runClaudeHook>[0] = { cwd, input, maxBlocks, failFast: !flagBool(args, 'no-fail-fast') };
   const config = flagString(args, 'config');
   const spec = flagString(args, 'spec');
   if (config) opts.configPath = config;

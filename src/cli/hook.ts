@@ -106,6 +106,8 @@ export interface ClaudeHookOptions extends Pick<RunOptions, 'configPath' | 'spec
   cwd: string;
   input: HookInput;
   maxBlocks?: number;
+  /** Default true: the agent gets the first failure fast; the remaining gates run on its next stop. */
+  failFast?: boolean;
 }
 
 export async function runClaudeHook(opts: ClaudeHookOptions): Promise<HookResponse> {
@@ -116,7 +118,7 @@ export async function runClaudeHook(opts: ClaudeHookOptions): Promise<HookRespon
   const early = precheck(state, fingerprint, input);
   if (early) return early;
 
-  const runOpts: RunOptions = { cwd };
+  const runOpts: RunOptions = { cwd, failFast: opts.failFast !== false };
   if (opts.configPath) runOpts.configPath = opts.configPath;
   if (opts.specPath) runOpts.specPath = opts.specPath;
   const { report } = await runGates(runOpts);

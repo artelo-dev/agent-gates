@@ -62,10 +62,11 @@ That transcript is from a real Claude Code session. That time Claude had been as
 The hook is built not to get in the way:
 
 - **No re-runs on idle turns.** It fingerprints the working tree (git diff + untracked files). When Claude only answered a question and nothing changed, the hook returns right away without running anything.
+- **Fast feedback.** The quick gates (tsc, eslint, content-lint) always run. After a failure the expensive ones (build, tests, browser) are skipped until the next stop, so Claude hears about a type error in seconds, not after a full build. Use `--no-fail-fast` to run everything every time.
 - **No endless loops.** After 3 consecutive blocked stops (`--max-blocks`) Claude is allowed to stop, and you get a warning. If Claude tries to stop again without changing anything, it is let go and you are told why.
 - **Claude can push back.** If the gates conflict with what you asked for (for example "just use lorem ipsum for now"), Claude tells you about the conflict instead of quietly weakening the check.
 
-Hook options are `--max-blocks <n>` (default 3) and `--output context|block`. `context`, the default, continues the turn and shows the failures as "Stop hook feedback". `block` uses `decision: "block"`.
+Hook options are `--max-blocks <n>` (default 3), `--no-fail-fast` and `--output context|block`. `context`, the default, continues the turn and shows the failures as "Stop hook feedback". `block` uses `decision: "block"`.
 
 ## Codex, Gemini CLI, Cursor, Aider and others
 
@@ -99,7 +100,7 @@ This writes `.github/workflows/agent-gates.yml`: install, then the Playwright br
 
 Browser gates run only after `build` passes. They start the app with your `start` script on port 3100, unless you set `server.command` or `server.url`. Content-lint scans what git tracks, so build output and anything else in `.gitignore` is skipped. Your own text about placeholders, in Markdown files and code comments, doesn't count. Only copy that ships does.
 
-You can also run a subset: `npx agent-gates tsc eslint content-lint`.
+You can also run a subset: `npx agent-gates tsc eslint content-lint`. `--fail-fast` skips the expensive gates after the first failure, which is the hook's default.
 
 ## Configuration
 

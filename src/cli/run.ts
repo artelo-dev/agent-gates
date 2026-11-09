@@ -24,6 +24,8 @@ export interface RunOptions {
   /** Artifacts dir (relative to cwd). Default `.agent-gates/last`. */
   outDir?: string;
   signal?: AbortSignal;
+  /** Stop at the first failing gate (the hook's default). */
+  failFast?: boolean;
   onGateStart?: (gate: GateId) => void;
   onGateResult?: (result: GateResult) => void;
 }
@@ -90,6 +92,7 @@ export async function runGates(opts: RunOptions): Promise<RunOutcome> {
     throw new CliError('no gates to run: none detected and none configured (run `agent-gates init`)');
   }
   const hooks: Parameters<typeof createGateRunner>[0] = {};
+  if (opts.failFast) hooks.failFast = true;
   if (opts.onGateStart) hooks.onGateStart = (gate) => opts.onGateStart?.(gate);
   if (opts.onGateResult) hooks.onGateResult = (result) => opts.onGateResult?.(result);
   const report = await createGateRunner(hooks).run(gates, loaded.config, ctx);

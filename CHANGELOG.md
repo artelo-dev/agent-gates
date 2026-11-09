@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fail-fast, on by default in the hook (`--fail-fast` for the CLI): after a failure the build, tests and browser gates are skipped, while tsc, eslint and content-lint always run. On the Artelo landing a failing stop answered in 7.3 s instead of 10.3 s.
+- Browser gates skipped because the build failed no longer count as failures of their own, so the agent is not told to "install the missing tool".
 - JSON Schema for `agent-gates.yaml` (`schema/agent-gates.schema.json`), referenced from the file `init` writes: editor autocomplete and typo checks.
 - GitHub Actions annotations: failures appear inline on the PR diff (`--no-annotations` to disable).
 - Build script runs on Windows `cmd.exe`; CI matrix for Linux, macOS, Windows.

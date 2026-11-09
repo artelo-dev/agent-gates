@@ -131,6 +131,8 @@ describe('gate runner', () => {
       ['lighthouse', 'skipped'],
     ]);
     expect(report.results[1]?.summary).toBe('SKIPPED: blocked: the build gate did not pass');
+    // Only the build blocks; the skipped browser gates are not reported as failures of their own.
+    expect(report.results.map((r) => r.blocking)).toEqual([true, false, false]);
     expect(server.starts).toHaveLength(0);
     expect(report.passed).toBe(false);
   });
@@ -204,5 +206,42 @@ describe('gate runner', () => {
       server: new FakeServer('server exited early (code 1)'),
     }).run(['visual'], { gates: {} }, ctx());
     expect(report.results[0]).toMatchObject({ status: 'error', summary: 'preview server: server exited early (code 1)' });
+  });
+});
+
+describe('fail-fast', () => {
+  it('after a failure skips the expensive gates but still runs the quick static ones', async () => {
+    const { createGateRunner } = await import('../src/index.js');
+    const { makeTempDir: mk } = await import('./helpers.js');
+    const tmp = await mk();
+    try {
+      const calls: string[] = [];
+      const gate = (id: string, status: 'passed' | 'failed') => ({
+        id,
+        async run() {
+          calls.push(id);
+          return { status, summary: status, issues: [] };
+        },
+      });
+      const runner = createGateRunner({
+        failFast: true,
+        writeReport: false,
+        gates: [gate('tsc', 'failed'), gate('eslint', 'passed'), gate('content-lint', 'failed'), gate('build', 'passed'), gate('my-check', 'passed')],
+      });
+      const config = { gates: { tsc: {}, eslint: {}, 'content-lint': {}, build: {}, 'my-check': {} } };
+      const report = await runner.run([], config, { runId: 'r', cwd: tmp.dir, artifactsDir: tmp.dir });
+      expect(calls).toEqual(['tsc', 'eslint', 'content-lint']);
+      expect(report.passed).toBe(false);
+      expect(report.results.map((r) => [r.gate, r.status, r.blocking])).toEqual([
+        ['tsc', 'failed', true],
+        ['eslint', 'passed', false],
+        ['content-lint', 'failed', true],
+        ['build', 'skipped', false],
+        ['my-check', 'skipped', false],
+      ]);
+      expect(report.results[3]?.summary).toBe('SKIPPED: not run: tsc failed first (fail-fast)');
+    } finally {
+      await tmp.cleanup();
+    }
   });
 });
