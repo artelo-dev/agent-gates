@@ -1,5 +1,7 @@
 # agent-gates
 
+[![ci](https://github.com/artelo-dev/agent-gates/actions/workflows/ci.yml/badge.svg)](https://github.com/artelo-dev/agent-gates/actions/workflows/ci.yml) [![npm](https://img.shields.io/npm/v/agent-gates)](https://www.npmjs.com/package/agent-gates) [![license](https://img.shields.io/npm/l/agent-gates)](LICENSE)
+
 Hard quality gates for any coding agent. Your agent says it's done. `agent-gates` checks whether that's true.
 
 ```
@@ -147,7 +149,7 @@ if (!report.passed) process.exit(1);
 
 ## Status
 
-This is version 0.1. It is developed and tested on macOS against Next.js projects. Linux should work (the generated CI workflow runs on it) but hasn't seen much use yet, and Windows is untested. Browser gates assume a Node web app with a `start` script. Issues and PRs are welcome.
+This is version 0.1. The test suite passes on macOS and Linux (Node 20.19+), and it has been run against Next.js projects. Windows is not supported yet: CI runs it, but it is allowed to fail. Browser gates assume a Node web app with a `start` script. Issues and PRs are welcome.
 
 agent-gates is the quality-gate layer of [Artelo](https://artelo.space), a local harness that takes a brief to a deployed project with the coding agents you already pay for. This part is free and MIT.
 
