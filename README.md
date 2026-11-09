@@ -4,6 +4,10 @@
 
 Hard quality gates for any coding agent. Your agent says it's done. `agent-gates` checks whether that's true.
 
+![agent-gates catching a type error, placeholder copy and a dead link, then passing](docs/demo.gif)
+
+<sub>Recorded with the real CLI on a Next.js app. The hook output is exactly what Claude Code receives when it tries to stop. The fix step is replayed; a live Claude Code session is described [below](#claude-code-no-more-premature-done).</sub>
+
 ```
 $ npx agent-gates
 ✓ tsc            2.0s  no type errors
