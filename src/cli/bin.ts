@@ -3,6 +3,7 @@
 import { appendFile, mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { GatesConfigError } from '../config.js';
+import { githubAnnotations } from './annotations.js';
 import { assertKnownFlags, flagBool, flagString, parseArgs, UsageError } from './args.js';
 import type { ParsedArgs } from './args.js';
 import { detectGates } from './detect.js';
@@ -28,6 +29,7 @@ Run options
   --spec <file>                spec YAML with pages/sections: enables the playwright smoke gate
   --out <dir>                  report + screenshots dir (default: .agent-gates/last)
   --cwd <dir>                  project directory (default: current directory)
+  --no-annotations             in GitHub Actions, do not print ::error annotations
   --no-color
 
 Init options
@@ -58,7 +60,7 @@ async function readStdin(): Promise<string> {
 }
 
 async function cmdRun(args: ParsedArgs, gates: string[]): Promise<number> {
-  assertKnownFlags(args, ['json', 'config', 'spec', 'out', 'cwd', 'no-color']);
+  assertKnownFlags(args, ['json', 'config', 'spec', 'out', 'cwd', 'no-color', 'no-annotations']);
   const s = style(args);
   const json = flagBool(args, 'json');
   const controller = new AbortController();
@@ -80,6 +82,9 @@ async function cmdRun(args: ParsedArgs, gates: string[]): Promise<number> {
     opts.onGateResult = (r) => console.log(formatGateLine(r, s));
   }
   const { report, loaded, reportPath } = await runGates(opts);
+  if (process.env.GITHUB_ACTIONS === 'true' && !flagBool(args, 'no-annotations')) {
+    for (const line of githubAnnotations(report)) console.log(line);
+  }
   if (json) {
     console.log(JSON.stringify(report, null, 2));
   } else {

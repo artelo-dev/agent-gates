@@ -279,3 +279,38 @@ describe('Claude Stop hook decisions', () => {
     expect(decide(report('passed'), state({ blocks: 2 }), { stop_hook_active: true }, 3)).toEqual({ response: { kind: 'allow' }, blocks: 0 });
   });
 });
+
+describe('GitHub annotations', () => {
+  it('emits one escaped ::error per file issue of a blocking gate, and a summary line otherwise', async () => {
+    const { githubAnnotations } = await import('../src/cli/annotations.js');
+    const report = aggregateReport({
+      runId: 'r',
+      startedAt: 't',
+      finishedAt: 't',
+      results: [
+        {
+          gate: 'content-lint',
+          status: 'failed',
+          summary: '1 content problem',
+          durationMs: 1,
+          issues: [{ severity: 'error', file: 'src/a, b.tsx', line: 3, column: 7, rule: 'lorem', message: 'lorem: "x"\nnext' }],
+        },
+        { gate: 'build', status: 'failed', summary: 'build failed: 100% broken', durationMs: 1, issues: [{ severity: 'error', message: 'exit code 1' }] },
+        { gate: 'tsc', status: 'passed', summary: 'ok', durationMs: 1, issues: [] },
+      ],
+    });
+    expect(githubAnnotations(report)).toEqual([
+      '::error file=src/a%2C b.tsx,line=3,col=7,title=agent-gates content-lint::lorem: "x"%0Anext [lorem]',
+      '::error title=agent-gates build::build failed: 100%25 broken',
+    ]);
+  });
+
+  it('caps the number of annotations', async () => {
+    const { githubAnnotations } = await import('../src/cli/annotations.js');
+    const issues = Array.from({ length: 5 }, (_, i) => ({ severity: 'error' as const, file: 'a.ts', line: i + 1, message: 'm' }));
+    const report = aggregateReport({ runId: 'r', startedAt: 't', finishedAt: 't', results: [{ gate: 'tsc', status: 'failed', summary: 's', durationMs: 1, issues }] });
+    const lines = githubAnnotations(report, 3);
+    expect(lines).toHaveLength(4);
+    expect(lines[3]).toBe('::warning title=agent-gates::2 more problems not annotated; see the report artifact');
+  });
+});

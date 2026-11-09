@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- GitHub Actions annotations: failures appear inline on the PR diff (`--no-annotations` to disable).
+- Build script runs on Windows `cmd.exe`; CI matrix for Linux, macOS, Windows.
+
 ## 0.1.0
 
 First public release.

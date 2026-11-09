@@ -81,7 +81,7 @@ This adds a short "Definition of done" block to `AGENTS.md`: the task isn't done
 npx agent-gates init --github
 ```
 
-This writes `.github/workflows/agent-gates.yml`: install, then the Playwright browser if browser gates are on, then `agent-gates`, then upload the report and screenshots as an artifact. In any other CI, run `npx agent-gates` and check the exit code.
+This writes `.github/workflows/agent-gates.yml`: install, then the Playwright browser if browser gates are on, then `agent-gates`, then upload the report and screenshots as an artifact. Inside GitHub Actions every failure is also printed as an `::error` annotation, so it shows up on the right line of the PR diff (turn it off with `--no-annotations`). In any other CI, run `npx agent-gates` and check the exit code.
 
 ## Gates
 
